@@ -57,6 +57,6 @@ big ugly unused built in speaker bar
 
 ## Sound/Movie react light
 
-> Full research: [reactive-light.md](reference/entertainment/reactive-light.md)
+> Full research: [reactive-light.md](reference/entertainment/reactive-light.md) · **Build plan:** [light-build/README.md](light-build/README.md)
 
 does't exist yet but i want it
