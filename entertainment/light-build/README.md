@@ -94,7 +94,7 @@ Prices are rough US street prices, October 2026. **(unverified)** means not conf
 | Light | Mount | 45° aluminium channel with diffuser (about 3 m, in 1 m lengths) + 3M Command stretch-release strips | $25–35 **(unverified)** |
 | Power | PSU | **Mean Well LRS-75-5** (5 V 14 A) + mains cord | $20–25 |
 | Audio | Fallback mic (optional) | INMP441 | $3–5 |
-| | | **Total** | **≈ $280–350** |
+| | | **Total** | **≈ $270–350** |
 
 ### Where the money can and can't be cut
 
