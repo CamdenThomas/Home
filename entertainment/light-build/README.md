@@ -17,7 +17,7 @@ The build plan for the sound/movie reactive light. Background research and every
 | D5 | **The capture side stays 1080p forever** | HyperHDR shrinks the picture to a tiny grid before working out the LED colours, so capture resolution has no effect on light quality. A 1080p grabber is the right part even with an 8K TV. |
 | D6 | **SK6812 RGBW cold-white, 60 LEDs/m, 5 V, one 5 m reel** | True white for D65 bias light, 60/m is the quality sweet spot. 5 m covers the 42" (2.9 m) now and a 65–75" TV later (4.5–5.2 m). |
 | D7 | **WLED drives the strip; HyperHDR sends colours to it over Wi-Fi (DDP)** | Keeps WLED's sound mode on the same strip. When video stops, WLED falls back to the sound-reactive preset by itself. |
-| D8 | **Host: a reused Raspberry Pi 4, on Ethernet**, not the OptiPlex | Video sync shouldn't need the PC to be on. A Pi 4 is enough ([§6.1](#61-host-raspberry-pi-4-reuse)). |
+| D8 | **Host: the OptiPlex 7060 runs HyperHDR. No Pi** (decided 2026-10-05) | It's already at the AV shelf and costs nothing. The PC is on for all TV use; when it's off, the light still does sound mode on its own ([§6.1](#61-host-optiplex-7060)). |
 | D9 | **Controller: ESP32 + WLED** (decided 2026-10-05) | Ready-made firmware covers every job; the Teensy would mean writing it all ([§6.3](#63-esp32-vs-the-spare-teensy-41)). |
 | D10 | **Mount: strip lives in aluminium channels; channels attach with stretch-release strips; every side unplugs** | Nothing sticks to the TV permanently, and the strip, channels and controller move to the next TV ([§7](#7-mounting-removable)). |
 
@@ -29,7 +29,7 @@ flowchart LR
     AVR -- HDMI out --> SP[ezcoo EZ-SP12H21<br/>HDMI 2.1 splitter]
     SP -- "OUT1: full res, 8K60 / 4K120" --> TV[Vizio now<br/>8K TV later]
     SP -- "OUT2: scaled to 1080p" --> CAP[MS2130 USB 3 grabber]
-    CAP -- USB 3 --> HOST[Raspberry Pi 4 reused<br/>HyperHDR, on Ethernet]
+    CAP -- USB 3 --> HOST[OptiPlex 7060<br/>HyperHDR, on Ethernet]
     HOST -- "Wi-Fi DDP" --> ESP[ESP32 + WLED<br/>+ PCM1808 line-in]
     AVR -- "FRONT L/R PRE OUT" --> ESP
     ESP -- data --> LED[SK6812 RGBW 60/m]
@@ -46,7 +46,7 @@ Prices are rough US street prices, October 2026. **(unverified)** means not conf
 | Video tap | HDMI 2.1 splitter with scaler | **ezcoo EZ-SP12H21** (8K60/4K120, HDCP 2.3, DV, VRR/ALLM, OUT2 downscales 4K→1080p) | $80 |
 | Video tap | Cables | 2 × short **Ultra High Speed (48 Gbps) certified** HDMI (AVR→splitter, splitter→TV; keep under 3 m) + 1 short HDMI to the grabber | $25 **(unverified)** |
 | Capture | USB grabber | **MS2130** USB 3 (1080p60, neutral colours) | $15–25 |
-| Host | HyperHDR computer | **Reused Raspberry Pi 4** + official 5.1 V 3 A PSU, microSD, heatsink/fan case, Ethernet ([§6.1](#61-host-raspberry-pi-4-reuse)). New Pi 5 2 GB kit if no Pi is free | $0–25 reused / $110–145 new **(unverified)** |
+| Host | HyperHDR computer | **OptiPlex 7060** (already owned), grabber in a USB 3 port ([§6.1](#61-host-optiplex-7060)). Add a USB 3 extension only if the splitter is out of reach | $0 (+ $10 extension if needed) |
 | Controller | ESP32 board | ESP32-WROOM-32 dev board | $6–10 |
 | Controller | Line-in | PCM1808 I2S ADC board + RCA→pin cable | $8–12 |
 | Controller | Level shifter + protection | 74AHCT125, 330 Ω, 1000 µF cap, 5 A blade fuse, perfboard, small project box | $10–15 |
@@ -55,14 +55,13 @@ Prices are rough US street prices, October 2026. **(unverified)** means not conf
 | Light | Mount | 45° aluminium channel with diffuser (about 3 m, in 1 m lengths) + 3M Command stretch-release strips | $25–35 **(unverified)** |
 | Power | PSU | **Mean Well LRS-75-5** (5 V 14 A) + mains cord | $20–25 |
 | Audio | Fallback mic (optional) | INMP441 | $3–5 |
-| | | **Total with a reused Pi 4** | **≈ $230–310** |
-| | | **Total with a new Pi 5** | **≈ $340–430** |
+| | | **Total** | **≈ $230–285** |
 
 ### Where the money can and can't be cut
 
 | Cut | Saves | Costs light quality? | Verdict |
 |---|---|---|---|
-| Use the **OptiPlex** as the HyperHDR host instead of a Pi | ~$110–145 | No. But the PC must be on for video sync, and the grabber must be within USB reach | Fine to **start** this way. Add the Pi later if the PC being on is annoying |
+| Use the **OptiPlex** as the HyperHDR host instead of a Pi | $0–145 | No. The PC must be on for video sync | **Done (D8)** |
 | Skip the **aluminium channel/diffuser** | $25–35 | No, on the stand (>10 cm from wall). Yes if wall-mounted close to the wall | **Keep:** it's what makes the mount removable and reusable (§7) |
 | **1080p splitter** (EZ-SP12H2) instead of HDMI 2.1 | ~$40 | No today, **but breaks D4** | **No** |
 | **WS2812B RGB** instead of SK6812 RGBW | ~$10 | **Yes**: bluish/pinkish whites, poor bias light | **No** |
@@ -73,8 +72,8 @@ Prices are rough US street prices, October 2026. **(unverified)** means not conf
 ## 4. Size
 
 - **Behind the TV:** the strip, plus the ESP32 box (about a deck of cards).
-- **At the AV shelf:** the splitter (about 10 × 6 cm), the grabber (USB-stick size), the Pi in a case (about 9 × 6 × 3 cm) and the PSU (99 × 82 × 30 mm). Put the PSU at the TV with the ESP32 so only mains and one RCA cable reach the TV.
-- Using the OptiPlex as host removes the Pi entirely.
+- **At the AV shelf:** the splitter (about 10 × 6 cm), the grabber (USB-stick size) and the PSU (99 × 82 × 30 mm). Put the PSU at the TV with the ESP32 so only mains and one RCA cable reach the TV.
+- No extra computer: the OptiPlex is already there.
 
 ## 5. Known limits of the 8K path
 
@@ -89,17 +88,17 @@ There are two different jobs here, and each needs a different kind of chip.
 
 | Job | Needs | Right tool |
 |---|---|---|
-| **Host:** read the capture card and turn the picture into LED colours (HyperHDR) | A USB host that understands video capture devices (UVC), megabytes of RAM per frame (a 1080p frame is about 4 MB), Linux or Windows | A **computer**: Pi 4, Pi 5 or the OptiPlex |
+| **Host:** read the capture card and turn the picture into LED colours (HyperHDR) | A USB host that understands video capture devices (UVC), megabytes of RAM per frame (a 1080p frame is about 4 MB), Linux or Windows | A **computer**: here the **OptiPlex** (a Pi 4/5 would also work) |
 | **LED controller:** drive the strip with exact timing, listen to the line-in, switch between video and sound modes | Hardware-timed LED output, I2S audio input, FFT, a link to the host | A **microcontroller**: ESP32 or Teensy 4.1 |
 
-### 6.1 Host: Raspberry Pi 4 (reuse)
+### 6.1 Host: OptiPlex 7060
 
-- **The OptiPlex works but must be on** whenever you want video sync, including for Xbox-only movies and games. A Pi runs on its own.
-- **A Pi 4 is enough.** HyperHDR supports Pi 4 and Pi 5 (any RAM size from 1 GB; 2 GB+ is comfortable). It samples the 1080p capture at about 640×480, which is light work.
-- **Plug the grabber into a blue USB 3 port.** On USB 2 the MS2130 falls back to compressed MJPEG, with more lag and worse colours.
-- **Put the Pi on Ethernet.** Pi 4 USB 3 traffic is a known source of 2.4 GHz interference, and the light controller's link is 2.4 GHz Wi-Fi.
-- Use the official 5.1 V 3 A USB-C power supply, add a heatsink or fan case, and use a good microSD card.
-- **No GPIO pins are used.** The Pi only uses USB and the network, so headers or wires from an old project don't matter. Remove anything that is still wired to a powered circuit; nothing needs desoldering or new pins.
+- **The PC must be on for video sync**, including Xbox-only movies and games. That's accepted. When the PC is off, the ESP32 still runs sound mode and the movie scene by itself.
+- **HyperHDR runs on Windows and Linux.** Install it on **Windows** (the everyday entertainment OS) and set it to start with Windows. If the Fedora side is booted for TV use too, install it there as well and copy the settings (HyperHDR can export/import its config).
+- **Plug the grabber into a USB 3 port** (blue or marked SS). On USB 2 the MS2130 falls back to compressed MJPEG, with more lag and worse colours. If the PC sits more than ~2 m from the splitter, use a short USB 3 extension (over 3 m: an active one).
+- **Load is light:** HyperHDR samples the capture at about 640×480. It shouldn't affect Qobuz or anything else on the PC.
+- **Ethernet** on the PC is preferred; the ESP32 still joins over 2.4 GHz Wi-Fi.
+- **Not affected by Qobuz exclusive mode:** the light's sound comes from the Denon pre-out, not from the PC.
 
 ### 6.2 What the LED controller has to do
 
@@ -125,7 +124,7 @@ Pins used: 1 LED data (2 later), 4 for the PCM1808 (BCK, LRCK, DATA, MCLK), powe
 | Link to host | Wi-Fi (2.4 GHz) | **USB serial** (fastest, no Wi-Fi), or Ethernet with the 4.1's MagJack kit |
 | Audio | PCM1808 board | PCM1808, or the Teensy Audio Shield's line-in (SGTL5000) |
 | Hardware | Enough | Much faster (600 MHz), more pins, DMA LED output |
-| Where it lives | Behind the TV, needs only power | Within a USB cable's reach of the Pi (≤ 5 m) |
+| Where it lives | Behind the TV, needs only power | Within a USB cable's reach of the PC (≤ 5 m) |
 
 **Recommendation:** use the **ESP32 + WLED** for the least work and phone/Home Assistant control out of the box. Pick the **Teensy** only if you want writing the firmware to be part of the project; it's the better hardware but has no ready firmware for this hybrid.
 
@@ -155,11 +154,11 @@ Assumes every part is in hand and some soldering experience. Mains wiring to the
 | | Controller board: ESP32, 74AHCT125, PCM1808, resistor, capacitor, fuse, connectors on perfboard, into the box | 2–3 h |
 | | PSU: mains cord, output leads, fuse, check voltages | 0.5–1 h |
 | | Bench test: 1 m of strip, WLED effects, line-in from a phone, auto-gain | 0.5–1 h |
-| | Pi: flash Raspberry Pi OS Lite, install HyperHDR, grabber shows a picture | 1 h |
+| | OptiPlex: install HyperHDR on Windows, start with Windows, grabber shows a picture | 0.5–1 h |
 | | Cut strip and channel, solder JST plugs per side, fit diffusers | 1.5–2 h |
-| | **Build total** | **≈ 6–8 h (one long day or two evenings)** |
+| | **Build total** | **≈ 5.5–8 h (one long day or two evenings)** |
 | **Install** | Clean the TV back, mount channels, plug sides together, power injection | 1–1.5 h |
-| | Splitter into the HDMI chain, EDID/scaler switches, grabber and Pi on Ethernet | 0.5 h |
+| | Splitter into the HDMI chain, EDID/scaler switches, grabber into the OptiPlex | 0.5 h |
 | | RCA from the Denon front pre-out to the ESP32 box | 0.25 h |
 | | HyperHDR: LED layout (start corner, per-side counts), WLED as DDP target, black-border detection, colour and smoothing | 1–2 h |
 | | WLED: sound-reactive preset as fallback, D65 movie scene, ABL limit, Home Assistant | 0.5–1 h |
@@ -177,7 +176,7 @@ Store stock is a general guide, not checked against live inventory. Call or chec
 | Inline blade fuse holder + 5 A fuse | **Auto parts store** (AutoZone, O'Reilly) or Home Depot | | |
 | Ultra High Speed (48 Gbps) HDMI cables | **Best Buy, Micro Center** (look for the certified Ultra High Speed label) | | Amazon, Monoprice |
 | ESP32 dev board, perfboard, 330 Ω resistor, 1000 µF capacitor | **Micro Center** (nearest is Denver) | | Amazon |
-| Raspberry Pi 4 extras (official PSU, case/fan, microSD) | **Micro Center**; microSD anywhere | | Amazon, CanaKit |
+| USB 3 extension (only if needed) | **Best Buy, Micro Center** | | Amazon |
 | RCA cable for the pre-out | **Best Buy, Walmart** (plain stereo RCA); the PCM1808 end is soldered on | | |
 | **ezcoo EZ-SP12H21 splitter** | | **Yes** | Amazon (ezcoo store) |
 | **MS2130 USB 3 grabber** | | **Yes** (store capture cards are pricier models) | Amazon / AliExpress |
@@ -190,14 +189,14 @@ Store stock is a general guide, not checked against live inventory. Call or chec
 **Ordering plan:**
 - **One Amazon order:** splitter, grabber, strip, JST pigtails and L corners, PCM1808 (+ INMP441), 45° channel. Usually arrives in 1–3 days.
 - **One Digi-Key or Mouser order:** Mean Well PSU and 74AHCT125 (+ spare passives). Skip it if Amazon has a genuine Mean Well and a 74AHCT125 pack.
-- **One store run:** Micro Center for the ESP32, perfboard, passives, HDMI cables and Pi bits. Home Depot and an auto parts store for wire, mains cord, fuse holder, channel and Command strips.
+- **One store run:** Micro Center for the ESP32, perfboard, passives, and HDMI cables. Home Depot and an auto parts store for wire, mains cord, fuse holder, channel and Command strips.
 - AliExpress is cheaper for the grabber, PCM1808 and strip, but takes 1–3 weeks.
 
 ## 10. Checks before buying
 
 - [ ] Denon **front L/R pre-out** has signal while the internal amps drive the speakers.
 - [ ] Measure the back of the Vizio (strip rectangle, stand gap) to set per-side LED counts.
-- [ ] Confirm a Pi 4 is free to reuse (any RAM size; check it boots).
+- [ ] Check the OptiPlex has a free USB 3 port and measure the distance to where the splitter will sit.
 
 ## Sources
 
@@ -205,5 +204,4 @@ Store stock is a general guide, not checked against live inventory. Call or chec
 - [EZ-SP12H21 manual](https://manuals.plus/ezcoo/ez-sp12h21-1x2-hdmi-2-1-splitter-scaler-manual)
 - [HyperHDR #1505, EZ-SP12H21 and Dolby Vision](https://github.com/awawa-dev/HyperHDR/discussions/1505)
 - [HyperHDR #1525, UGREEN 25173 + SP12H21](https://github.com/awawa-dev/HyperHDR/discussions/1525)
-- [Raspberry Pi 5 2 GB 2026 pricing (Geeknetic)](https://www.geeknetic.es/Noticia/32468/La-Raspberry-Pi-5-mas-barata-ya-esta-disponible-desde-56-euros-por-la-version-de-2-GB-de-RAM.html)
 - Strip, PSU, wiring and power figures: [reactive-light.md §6](../reference/entertainment/reactive-light.md#6-led-sizing-power-and-build-notes)
