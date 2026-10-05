@@ -1,0 +1,95 @@
+# Reactive Light Build (DIY WLED hybrid)
+
+The build plan for the sound/movie reactive light. Background research and every option considered: [reactive-light.md](../reference/entertainment/reactive-light.md).
+
+**Goal:** a light behind the TV that copies the picture's edge colours during video and pulses to the sound otherwise. It should be as small and cheap as possible with no loss of light quality, and **must pass 8K through untouched** so it never holds back a future TV/AVR upgrade.
+
+---
+
+## 1. Decisions so far
+
+| # | Decision | Why |
+|---|---|---|
+| D1 | **DIY WLED hybrid** (HyperHDR video sync + WLED sound mode) | Most accurate for the money, any TV size, local only, Home Assistant native. |
+| D2 | **Video input: HDMI, tapped after the AVR** with a splitter | One cable carries every source the AVR switches. |
+| D3 | **Audio input: Denon FRONT L/R PRE OUT → line-in board** on the ESP32. INMP441 mic as fallback | The Denon's HDMI out can't be trusted for sound: inputs set to AMP likely send no audio to the TV, analog inputs never reach HDMI, Dolby Digital can't be read by a capture card, and HyperHDR doesn't react to sound anyway. The pre-out is a clean copy of everything you hear. WLED auto-gain removes the volume-knob effect. |
+| D4 | **8K60 / 4K120 pass-through, HDCP 2.3, HDR/Dolby Vision, VRR/ALLM** on the TV path | Don't repeat the 1080p bottleneck. Only the splitter sits in the TV's path, so only the splitter has to be 8K-ready. |
+| D5 | **The capture side stays 1080p forever** | HyperHDR shrinks the picture to a tiny grid before working out the LED colours, so capture resolution has no effect on light quality. A 1080p grabber is the right part even with an 8K TV. |
+| D6 | **SK6812 RGBW cold-white, 60 LEDs/m, 5 V, one 5 m reel** | True white for D65 bias light, 60/m is the quality sweet spot. 5 m covers the 42" (2.9 m) now and a 65–75" TV later (4.5–5.2 m). |
+| D7 | **WLED drives the strip; HyperHDR sends colours to it over Wi-Fi (DDP)** | Keeps WLED's sound mode on the same strip. When video stops, WLED falls back to the sound-reactive preset by itself. |
+
+## 2. Signal chain
+
+```mermaid
+flowchart LR
+    SRC[Xbox / PC / future sources] -- HDMI --> AVR[Denon AVR-3806<br/>later: 8K AVR]
+    AVR -- HDMI out --> SP[ezcoo EZ-SP12H21<br/>HDMI 2.1 splitter]
+    SP -- "OUT1: full res, 8K60 / 4K120" --> TV[Vizio now<br/>8K TV later]
+    SP -- "OUT2: scaled to 1080p" --> CAP[MS2130 USB 3 grabber]
+    CAP -- USB 3 --> HOST[Raspberry Pi 5 2 GB<br/>HyperHDR]
+    HOST -- "Wi-Fi DDP" --> ESP[ESP32 + WLED<br/>+ PCM1808 line-in]
+    AVR -- "FRONT L/R PRE OUT" --> ESP
+    ESP -- data --> LED[SK6812 RGBW 60/m]
+    PSU[Mean Well 5 V PSU] --> LED
+    PSU --> ESP
+```
+
+## 3. Minimal parts list
+
+Prices are rough US street prices, October 2026. **(unverified)** means not confirmed from a current listing.
+
+| Block | Part | Pick | Approx. |
+|---|---|---|---|
+| Video tap | HDMI 2.1 splitter with scaler | **ezcoo EZ-SP12H21** (8K60/4K120, HDCP 2.3, DV, VRR/ALLM, OUT2 downscales 4K→1080p) | $80 |
+| Video tap | Cables | 2 × short **Ultra High Speed (48 Gbps) certified** HDMI (AVR→splitter, splitter→TV; keep under 3 m) + 1 short HDMI to the grabber | $25 **(unverified)** |
+| Capture | USB grabber | **MS2130** USB 3 (1080p60, neutral colours) | $15–25 |
+| Host | HyperHDR computer | **Raspberry Pi 5 2 GB** + official 27 W PSU + 32 GB microSD + case | $110–145 **(2026 RAM-driven price rise; unverified US)** |
+| Controller | ESP32 board | ESP32-WROOM-32 dev board | $6–10 |
+| Controller | Line-in | PCM1808 I2S ADC board + RCA→pin cable | $8–12 |
+| Controller | Level shifter + protection | 74AHCT125, 330 Ω, 1000 µF cap, 5 A blade fuse, perfboard, small project box | $10–15 |
+| Light | LED strip | **SK6812 RGBW cold white, 60/m, 5 m, IP30** (bare, not waterproof: thinner and cheaper) | $30–40 **(unverified)** |
+| Light | Wiring | 18 AWG two-core, JST-SM pigtails, solderless L corners, VHB tape/clips | $10–15 |
+| Power | PSU | **Mean Well LRS-75-5** (5 V 14 A) + mains cord | $20–25 |
+| Audio | Fallback mic (optional) | INMP441 | $3–5 |
+| | | **Total with Pi** | **≈ $315–390** |
+| | | **Total using the OptiPlex as host (no Pi)** | **≈ $205–245** |
+
+### Where the money can and can't be cut
+
+| Cut | Saves | Costs light quality? | Verdict |
+|---|---|---|---|
+| Use the **OptiPlex** as the HyperHDR host instead of a Pi | ~$110–145 | No. But the PC must be on for video sync, and the grabber must be within USB reach | Fine to **start** this way. Add the Pi later if the PC being on is annoying |
+| Skip the **aluminium channel/diffuser** | $15–30 | No, on the stand (>10 cm from wall). Yes if wall-mounted close to the wall | Skip now; add with a wall mount |
+| **1080p splitter** (EZ-SP12H2) instead of HDMI 2.1 | ~$40 | No today, **but breaks D4** | **No** |
+| **WS2812B RGB** instead of SK6812 RGBW | ~$10 | **Yes**: bluish/pinkish whites, poor bias light | **No** |
+| **30/m** instead of 60/m | ~$10 | **Yes**: blotchy halo | **No** |
+| **Mic** instead of pre-out line-in | ~$5 | Slightly: hears talking/room noise | Keep as fallback only |
+| **Pre-built WLED controller** (QuinLED/Gledopto) instead of DIY board | costs +$15–25 | No | Optional if you'd rather not solder |
+
+## 4. Size
+
+- **Behind the TV:** the strip, plus the ESP32 box (about a deck of cards).
+- **At the AV shelf:** the splitter (about 10 × 6 cm), the grabber (USB-stick size), the Pi in a case (about 9 × 6 × 3 cm) and the PSU (99 × 82 × 30 mm). Put the PSU at the TV with the ESP32 so only mains and one RCA cable reach the TV.
+- Using the OptiPlex as host removes the Pi entirely.
+
+## 5. Known limits of the 8K path
+
+- **Eventual true 8K input:** the splitter's scaler only does 4K→1080p. With a real 8K60 source, OUT1 still passes 8K to the TV, but OUT2 may not give the grabber a picture it can take **(unverified)**, so the light would fall back to sound mode. Real 8K content is almost nonexistent; if it ever matters, the splitter is the only part to swap.
+- **Dolby Vision:** the scaler can't downscale DV. In DV the light may lose video sync, and users report the splitter can push the Xbox to HDR10 instead of DV ([HyperHDR #1505](https://github.com/awawa-dev/HyperHDR/discussions/1505)). Check the EDID switch settings when the DV-capable gear arrives.
+- **eARC:** a splitter between the AVR and the TV won't carry eARC back to the AVR. That only matters for apps built into a future TV; sources plugged into the AVR are unaffected.
+- **HDCP on OUT2:** streaming apps (Netflix etc.) use HDCP. Whether OUT2 hands the grabber a viewable picture decides whether streaming gets video sync or falls back to sound mode. See [reactive-light §5.2](../reference/entertainment/reactive-light.md#52-hyperionng--hyperhdr-on-a-raspberry-pi-with-usb-hdmi-capture).
+
+## 6. Checks before buying
+
+- [ ] Denon **front L/R pre-out** has signal while the internal amps drive the speakers.
+- [ ] Measure the back of the Vizio (strip rectangle, stand gap) to set per-side LED counts.
+- [ ] Pick the host: OptiPlex now, or Pi 5 from the start.
+
+## Sources
+
+- [ezcoo EZ-SP12H21 product page](https://www.easycoolav.com/products/8k60hz-4k120hz-hdmi-21-splitter-1x248gbps)
+- [EZ-SP12H21 manual](https://manuals.plus/ezcoo/ez-sp12h21-1x2-hdmi-2-1-splitter-scaler-manual)
+- [HyperHDR #1505, EZ-SP12H21 and Dolby Vision](https://github.com/awawa-dev/HyperHDR/discussions/1505)
+- [HyperHDR #1525, UGREEN 25173 + SP12H21](https://github.com/awawa-dev/HyperHDR/discussions/1525)
+- [Raspberry Pi 5 2 GB 2026 pricing (Geeknetic)](https://www.geeknetic.es/Noticia/32468/La-Raspberry-Pi-5-mas-barata-ya-esta-disponible-desde-56-euros-por-la-version-de-2-GB-de-RAM.html)
+- Strip, PSU, wiring and power figures: [reactive-light.md §6](../reference/entertainment/reactive-light.md#6-led-sizing-power-and-build-notes)
