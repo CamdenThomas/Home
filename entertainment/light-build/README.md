@@ -20,6 +20,7 @@ The build plan for the sound/movie reactive light. Background research and every
 | D8 | **Host: the OptiPlex 7060 runs HyperHDR. No Pi** (decided 2026-10-05) | It's already at the AV shelf and costs nothing. The PC is on for all TV use; when it's off, the light still does sound mode on its own ([§6.1](#61-host-optiplex-7060)). |
 | D9 | **Controller: ESP32 + WLED** (decided 2026-10-05) | Ready-made firmware covers every job; the Teensy would mean writing it all ([§6.3](#63-esp32-vs-the-spare-teensy-41)). |
 | D10 | **Mount: strip lives in aluminium channels; channels attach with stretch-release strips; every side unplugs** | Nothing sticks to the TV permanently, and the strip, channels and controller move to the next TV ([§7](#7-mounting-removable)). |
+| D11 | **Black box + light puck:** splitter, grabber and audio ESP32 in one 3D-printed box at the AV shelf; a second ESP32 "puck" + PSU at the TV, linked by Wi-Fi | One tidy box with HDMI in/out, RCA in, USB out and 5 V in, and no cable from the shelf to the TV ([§2.1](#21-what-lives-where-the-black-box-and-the-light-puck)). |
 
 ## 2. Signal chain
 
@@ -30,12 +31,47 @@ flowchart LR
     SP -- "OUT1: full res, 8K60 / 4K120" --> TV[Vizio now<br/>8K TV later]
     SP -- "OUT2: scaled to 1080p" --> CAP[MS2130 USB 3 grabber]
     CAP -- USB 3 --> HOST[OptiPlex 7060<br/>HyperHDR, on Ethernet]
-    HOST -- "Wi-Fi DDP" --> ESP[ESP32 + WLED<br/>+ PCM1808 line-in]
-    AVR -- "FRONT L/R PRE OUT" --> ESP
-    ESP -- data --> LED[SK6812 RGBW 60/m]
-    PSU[Mean Well 5 V PSU] --> LED
-    PSU --> ESP
+    AVR -- "FRONT L/R PRE OUT" --> AUD[Box ESP32 + PCM1808<br/>WLED Audio Sync sender]
+    HOST -- "LED colours, DDP over Wi-Fi" --> PUCK[Light puck at the TV<br/>ESP32 + WLED]
+    AUD -- "sound data, Wi-Fi UDP" --> PUCK
+    PUCK -- data --> LED[SK6812 RGBW 60/m]
+    PSU[Mean Well 5 V PSU at the TV] --> LED
+    PSU --> PUCK
+    subgraph BOX [Black box at the AV shelf]
+        SP
+        CAP
+        AUD
+    end
 ```
+
+### 2.1 What lives where: the black box and the light puck
+
+**Black box (AV shelf, 3D-printed case).** Holds the splitter, the grabber and an ESP32 with the line-in board. Low voltage only, no mains inside.
+
+| Port on the case | Connects to | Carries |
+|---|---|---|
+| **HDMI IN** | Denon HDMI out | Every source's picture (and sound, passed through untouched) |
+| **HDMI OUT** | TV | Same signal, up to 8K60 / 4K120 |
+| **RCA L / R IN** | Denon FRONT L/R PRE OUT | Line-level sound for the music mode |
+| **USB OUT** (USB-C or USB-B female) | OptiPlex USB 3 port | The 1080p picture copy for HyperHDR (see below) |
+| **5 V IN** (USB-C) | 5 V 3 A wall supply | Powers the splitter and the box ESP32 |
+| Mode button + status LED (optional) | | Cycle video / music / movie scene / off |
+
+**Light puck (behind the TV).** A second, small printed box: ESP32 + 74AHCT125 + fuse, with the Mean Well PSU in its own printed cover next to it. Plugs into the wall outlet behind the TV and into the strip. Nothing else connects to it, so **the link between the shelf and the TV is wireless** (Wi-Fi).
+
+**Why not Bluetooth:** Bluetooth LED strips only take a few colour zones, with 100 ms+ lag. Pixel-level sync needs about 42–72 KB/s at 60 fps with low lag, which is a Wi-Fi job. And the lights are never cordless: the strip draws several amps at 5 V, so it always needs a power supply at the TV.
+
+**What goes over the USB cable to the OptiPlex:** only the picture, one way. The grabber shows up on the PC as a webcam-style video device (UVC) sending the 1080p picture (uncompressed, about 2 Gbit/s, which is why it needs USB 3). The USB also powers the grabber. The grabber also offers a USB audio device; it's unused. **Nothing comes back down the USB.** HyperHDR works out the edge colours on the PC and sends them over the network (Ethernet → router → Wi-Fi) straight to the puck.
+
+**Audio path:** the box ESP32 reads the RCA input and broadcasts the sound analysis with WLED's built-in **Audio Sync** (UDP). The puck ESP32 receives it and runs the sound effects. The box needs no cable to the TV, and the extra delay is a few milliseconds.
+
+**Case design rules:**
+- **No HDMI extension jumpers inside the box.** 8K (48 Gbps) is fragile, and every extra connector risks dropouts. Mount the splitter so **its own HDMI ports sit flush in cut-outs** in the case wall. The internal splitter OUT2 → grabber link is 1080p, so a short 15 cm cable or a coupler is fine there.
+- The **USB** port can be a 30 cm panel-mount USB 3 extension from the grabber to the case wall; 5 Gbps tolerates that.
+- **Screw the splitter down** (heat-set inserts) so plugging and unplugging HDMI pushes on the case, not on the splitter's board. Leave the splitter in its own metal shell.
+- Print in **PETG or ASA**, not PLA: the splitter runs warm. Add vent slots over the splitter.
+- Measure every part once it arrives before designing the case; exact sizes aren't confirmed.
+- Keep **mains out of the black box.** The Mean Well lives at the TV in its own cover with a fused IEC inlet and strain relief, with no exposed terminals.
 
 ## 3. Minimal parts list
 
@@ -47,15 +83,18 @@ Prices are rough US street prices, October 2026. **(unverified)** means not conf
 | Video tap | Cables | 2 × short **Ultra High Speed (48 Gbps) certified** HDMI (AVR→splitter, splitter→TV; keep under 3 m) + 1 short HDMI to the grabber | $25 **(unverified)** |
 | Capture | USB grabber | **MS2130** USB 3 (1080p60, neutral colours) | $15–25 |
 | Host | HyperHDR computer | **OptiPlex 7060** (already owned), grabber in a USB 3 port ([§6.1](#61-host-optiplex-7060)). Add a USB 3 extension only if the splitter is out of reach | $0 (+ $10 extension if needed) |
-| Controller | ESP32 board | ESP32-WROOM-32 dev board | $6–10 |
+| Controller | ESP32 boards | **2 ×** ESP32-WROOM-32 dev board (box: audio sender; puck: LED driver) | $12–20 |
 | Controller | Line-in | PCM1808 I2S ADC board + RCA→pin cable | $8–12 |
-| Controller | Level shifter + protection | 74AHCT125, 330 Ω, 1000 µF cap, 5 A blade fuse, perfboard, small project box | $10–15 |
+| Controller | Level shifter + protection | 74AHCT125, 330 Ω, 1000 µF cap, 5 A blade fuse, perfboard (puck) | $8–12 |
+| Black box | Panel parts | Panel-mount USB 3 extension (30 cm, USB-C or B female), panel RCA jack pair, USB-C 5 V panel jack, momentary button + LED | $15–25 |
+| Black box | Power | 5 V 3 A USB-C wall supply | $8–12 |
+| Cases | 3D printing | PETG/ASA (~200 g for the box, puck and PSU cover), M3 heat-set inserts and screws, fused IEC inlet for the PSU cover | $15–20 |
 | Light | LED strip | **SK6812 RGBW cold white, 60/m, 5 m, IP30** (bare, not waterproof: thinner and cheaper) | $30–40 **(unverified)** |
 | Light | Wiring | 18 AWG two-core, JST-SM 4-pin pigtails (one per side), solderless L corners | $10–15 |
 | Light | Mount | 45° aluminium channel with diffuser (about 3 m, in 1 m lengths) + 3M Command stretch-release strips | $25–35 **(unverified)** |
 | Power | PSU | **Mean Well LRS-75-5** (5 V 14 A) + mains cord | $20–25 |
 | Audio | Fallback mic (optional) | INMP441 | $3–5 |
-| | | **Total** | **≈ $230–285** |
+| | | **Total** | **≈ $280–350** |
 
 ### Where the money can and can't be cut
 
