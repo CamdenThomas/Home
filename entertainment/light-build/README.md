@@ -18,7 +18,8 @@ The build plan for the sound/movie reactive light. Background research and every
 | D6 | **SK6812 RGBW cold-white, 60 LEDs/m, 5 V, one 5 m reel** | True white for D65 bias light, 60/m is the quality sweet spot. 5 m covers the 42" (2.9 m) now and a 65–75" TV later (4.5–5.2 m). |
 | D7 | **WLED drives the strip; HyperHDR sends colours to it over Wi-Fi (DDP)** | Keeps WLED's sound mode on the same strip. When video stops, WLED falls back to the sound-reactive preset by itself. |
 | D8 | **Host: a reused Raspberry Pi 4, on Ethernet**, not the OptiPlex | Video sync shouldn't need the PC to be on. A Pi 4 is enough ([§6.1](#61-host-raspberry-pi-4-reuse)). |
-| D9 | **Controller: ESP32 + WLED (pending: or the spare Teensy 4.1)** | ESP32 has ready firmware; Teensy is free but means writing the firmware ([§6.3](#63-esp32-vs-the-spare-teensy-41)). |
+| D9 | **Controller: ESP32 + WLED** (decided 2026-10-05) | Ready-made firmware covers every job; the Teensy would mean writing it all ([§6.3](#63-esp32-vs-the-spare-teensy-41)). |
+| D10 | **Mount: strip lives in aluminium channels; channels attach with stretch-release strips; every side unplugs** | Nothing sticks to the TV permanently, and the strip, channels and controller move to the next TV ([§7](#7-mounting-removable)). |
 
 ## 2. Signal chain
 
@@ -50,18 +51,19 @@ Prices are rough US street prices, October 2026. **(unverified)** means not conf
 | Controller | Line-in | PCM1808 I2S ADC board + RCA→pin cable | $8–12 |
 | Controller | Level shifter + protection | 74AHCT125, 330 Ω, 1000 µF cap, 5 A blade fuse, perfboard, small project box | $10–15 |
 | Light | LED strip | **SK6812 RGBW cold white, 60/m, 5 m, IP30** (bare, not waterproof: thinner and cheaper) | $30–40 **(unverified)** |
-| Light | Wiring | 18 AWG two-core, JST-SM pigtails, solderless L corners, VHB tape/clips | $10–15 |
+| Light | Wiring | 18 AWG two-core, JST-SM 4-pin pigtails (one per side), solderless L corners | $10–15 |
+| Light | Mount | 45° aluminium channel with diffuser (about 3 m, in 1 m lengths) + 3M Command stretch-release strips | $25–35 **(unverified)** |
 | Power | PSU | **Mean Well LRS-75-5** (5 V 14 A) + mains cord | $20–25 |
 | Audio | Fallback mic (optional) | INMP441 | $3–5 |
-| | | **Total with a reused Pi 4** | **≈ $205–270** |
-| | | **Total with a new Pi 5** | **≈ $315–390** |
+| | | **Total with a reused Pi 4** | **≈ $230–310** |
+| | | **Total with a new Pi 5** | **≈ $340–430** |
 
 ### Where the money can and can't be cut
 
 | Cut | Saves | Costs light quality? | Verdict |
 |---|---|---|---|
 | Use the **OptiPlex** as the HyperHDR host instead of a Pi | ~$110–145 | No. But the PC must be on for video sync, and the grabber must be within USB reach | Fine to **start** this way. Add the Pi later if the PC being on is annoying |
-| Skip the **aluminium channel/diffuser** | $15–30 | No, on the stand (>10 cm from wall). Yes if wall-mounted close to the wall | Skip now; add with a wall mount |
+| Skip the **aluminium channel/diffuser** | $25–35 | No, on the stand (>10 cm from wall). Yes if wall-mounted close to the wall | **Keep:** it's what makes the mount removable and reusable (§7) |
 | **1080p splitter** (EZ-SP12H2) instead of HDMI 2.1 | ~$40 | No today, **but breaks D4** | **No** |
 | **WS2812B RGB** instead of SK6812 RGBW | ~$10 | **Yes**: bluish/pinkish whites, poor bias light | **No** |
 | **30/m** instead of 60/m | ~$10 | **Yes**: blotchy halo | **No** |
@@ -127,12 +129,47 @@ Pins used: 1 LED data (2 later), 4 for the PCM1808 (BCK, LRCK, DATA, MCLK), powe
 
 **Recommendation:** use the **ESP32 + WLED** for the least work and phone/Home Assistant control out of the box. Pick the **Teensy** only if you want writing the firmware to be part of the project; it's the better hardware but has no ready firmware for this hybrid.
 
-## 7. Checks before buying
+## 7. Mounting (removable)
+
+Don't stick the strip's own adhesive to the TV. On a warm TV back it either lets go or, after a year or two, pulls off the finish when removed, and the strip is ruined either way.
+
+**How it works:** the strip sticks permanently into aluminium channels. The channels are the only thing attached to the TV, using stretch-release strips that come off clean.
+
+1. **Cut channel to the four sides** of the strip rectangle (about 0.93 m top and bottom, 0.52 m per side; measure first). Leave the bottom gap for the stand neck and cables.
+2. **Stick the strip into the channels** with its own adhesive, plus a dab of VHB at each end. Snap on the diffusers.
+3. **Wire each side as a removable section:** a JST-SM 4-pin plug at each end of every side (5 V, data, GND; the fourth pin spare), joined with short jumpers at the corners. Feed power at the start; add a fused injection lead to the far end.
+4. **Clean the TV back** with isopropyl alcohol, and attach each channel with **3M Command strips** (2–3 per side), about 2–5 cm in from the edge.
+5. **Fix the ESP32 box and loose wire** with Command strips or adhesive cable clips, also stretch-release, so no cable hangs off the strip.
+
+**Removal for the next TV:** unplug the sides, pull each Command tab slowly straight down along the surface, and lift the channels off. The TV is left clean. On the new TV, cut longer top and bottom channels, add strip from the leftover 2 m of the reel (or a second reel), solder on JST plugs, and update the LED counts in HyperHDR and WLED.
+
+*Alternative with no adhesive at all:* bolt a light aluminium frame to the TV's VESA holes and fix the channels to the frame. It's tidier but means a new frame for each TV.
+
+## 8. Time estimate
+
+Assumes every part is in hand and some soldering experience. Mains wiring to the PSU is the one step to do slowly and check twice.
+
+| Stage | Task | Time |
+|---|---|---|
+| **Build (bench)** | Flash WLED to the ESP32, join Wi-Fi, basic settings | 0.5 h |
+| | Controller board: ESP32, 74AHCT125, PCM1808, resistor, capacitor, fuse, connectors on perfboard, into the box | 2–3 h |
+| | PSU: mains cord, output leads, fuse, check voltages | 0.5–1 h |
+| | Bench test: 1 m of strip, WLED effects, line-in from a phone, auto-gain | 0.5–1 h |
+| | Pi: flash Raspberry Pi OS Lite, install HyperHDR, grabber shows a picture | 1 h |
+| | Cut strip and channel, solder JST plugs per side, fit diffusers | 1.5–2 h |
+| | **Build total** | **≈ 6–8 h (one long day or two evenings)** |
+| **Install** | Clean the TV back, mount channels, plug sides together, power injection | 1–1.5 h |
+| | Splitter into the HDMI chain, EDID/scaler switches, grabber and Pi on Ethernet | 0.5 h |
+| | RCA from the Denon front pre-out to the ESP32 box | 0.25 h |
+| | HyperHDR: LED layout (start corner, per-side counts), WLED as DDP target, black-border detection, colour and smoothing | 1–2 h |
+| | WLED: sound-reactive preset as fallback, D65 movie scene, ABL limit, Home Assistant | 0.5–1 h |
+| | **Install total** | **≈ 3.5–5 h**, plus a few evenings of fine-tuning while watching |
+
+## 9. Checks before buying
 
 - [ ] Denon **front L/R pre-out** has signal while the internal amps drive the speakers.
 - [ ] Measure the back of the Vizio (strip rectangle, stand gap) to set per-side LED counts.
 - [ ] Confirm a Pi 4 is free to reuse (any RAM size; check it boots).
-- [ ] Choose the controller: ESP32 + WLED, or write firmware for the Teensy 4.1.
 
 ## Sources
 
