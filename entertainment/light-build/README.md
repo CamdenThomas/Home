@@ -165,7 +165,35 @@ Assumes every part is in hand and some soldering experience. Mains wiring to the
 | | WLED: sound-reactive preset as fallback, D65 movie scene, ABL limit, Home Assistant | 0.5–1 h |
 | | **Install total** | **≈ 3.5–5 h**, plus a few evenings of fine-tuning while watching |
 
-## 9. Checks before buying
+## 9. Where to buy
+
+Store stock is a general guide, not checked against live inventory. Call or check the store's site first.
+
+| Part | In person | Online only? | Best online source |
+|---|---|---|---|
+| 3M Command strips, isopropyl alcohol | **Any** (Walmart, Target, Home Depot, Lowe's, grocery) | | |
+| 18 AWG two-core wire, mains cord for the PSU | **Home Depot / Lowe's / Ace** | | |
+| Aluminium LED channel + diffuser | **Home Depot / Lowe's** (lighting aisle, 1 m lengths; usually flat or U profile, 45° is rarer) | 45° corner profile is easiest online | Amazon (Muzata, LightingWill) |
+| Inline blade fuse holder + 5 A fuse | **Auto parts store** (AutoZone, O'Reilly) or Home Depot | | |
+| Ultra High Speed (48 Gbps) HDMI cables | **Best Buy, Micro Center** (look for the certified Ultra High Speed label) | | Amazon, Monoprice |
+| ESP32 dev board, perfboard, 330 Ω resistor, 1000 µF capacitor | **Micro Center** (nearest is Denver) | | Amazon |
+| Raspberry Pi 4 extras (official PSU, case/fan, microSD) | **Micro Center**; microSD anywhere | | Amazon, CanaKit |
+| RCA cable for the pre-out | **Best Buy, Walmart** (plain stereo RCA); the PCM1808 end is soldered on | | |
+| **ezcoo EZ-SP12H21 splitter** | | **Yes** | Amazon (ezcoo store) |
+| **MS2130 USB 3 grabber** | | **Yes** (store capture cards are pricier models) | Amazon / AliExpress |
+| **SK6812 RGBW 60/m 5 m strip** | | **Yes** | Amazon (BTF-Lighting) |
+| **PCM1808 line-in board**, INMP441 mic | | **Yes** | Amazon / AliExpress |
+| **74AHCT125 level shifter** | | **Yes** | Digi-Key / Mouser, or an Amazon multi-pack |
+| **Mean Well LRS-75-5 PSU** | | **Yes** (store supplies are no-name; avoid) | Digi-Key / Mouser / Amazon (sold by Mean Well distributors) |
+| JST-SM 4-pin pigtails, solderless L corners | Sometimes Micro Center | Mostly | Amazon (BTF-Lighting) |
+
+**Ordering plan:**
+- **One Amazon order:** splitter, grabber, strip, JST pigtails and L corners, PCM1808 (+ INMP441), 45° channel. Usually arrives in 1–3 days.
+- **One Digi-Key or Mouser order:** Mean Well PSU and 74AHCT125 (+ spare passives). Skip it if Amazon has a genuine Mean Well and a 74AHCT125 pack.
+- **One store run:** Micro Center for the ESP32, perfboard, passives, HDMI cables and Pi bits. Home Depot and an auto parts store for wire, mains cord, fuse holder, channel and Command strips.
+- AliExpress is cheaper for the grabber, PCM1808 and strip, but takes 1–3 weeks.
+
+## 10. Checks before buying
 
 - [ ] Denon **front L/R pre-out** has signal while the internal amps drive the speakers.
 - [ ] Measure the back of the Vizio (strip rectangle, stand gap) to set per-side LED counts.
